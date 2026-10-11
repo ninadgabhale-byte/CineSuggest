@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Movie Analytics Dashboard — CineSuggest</title>
+  <meta name="description" content="Charts and OLAP analysis over the MovieLens data warehouse.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎬%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="analytics">
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header" id="siteHeader">
+    <div class="container nav-inner">
+      <a href="index.html" class="logo" aria-label="CineSuggest home">
+        <span class="logo-icon" aria-hidden="true">🎬</span>
+        <span class="logo-text">CineSuggest</span>
+      </a>
+
+      <nav class="main-nav" id="mainNav" aria-label="Main navigation">
+        <ul class="nav-list">
+          <li><a href="index.html" class="nav-link">Home</a></li>
+          <li><a href="recommendations.html" class="nav-link">Recommendations</a></li>
+          <li><a href="analytics.html" class="nav-link">Analytics</a></li>
+          <li><a href="about.html" class="nav-link">About DWM</a></li>
+          <li class="nav-drawer-cta">
+            <a href="recommendations.html" class="btn btn-primary btn-block">Get Recommendations</a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <button type="button" class="icon-btn" id="navSearchToggle" aria-label="Search movies" aria-expanded="false" aria-controls="navSearch">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        </button>
+        <a href="recommendations.html" class="btn btn-primary btn-sm nav-cta">Get Recommendations</a>
+        <button type="button" class="icon-btn menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="mainNav">
+          <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="nav-search" id="navSearch" hidden>
+      <form class="container" id="navSearchForm" role="search" autocomplete="off">
+        <div class="search-field">
+          <label class="sr-only" for="navSearchInput">Search for a movie</label>
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          <input type="search" id="navSearchInput" placeholder="Search for a movie...">
+          <ul class="suggestions" id="navSuggestions" role="listbox" hidden></ul>
+        </div>
+      </form>
+    </div>
+  </header>
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+
+  <main id="main">
+    <section class="page-hero" aria-labelledby="pageTitle">
+      <div class="container">
+        <h1 class="page-title" id="pageTitle">Movie Analytics Dashboard</h1>
+        <p class="page-lead">Summary statistics and OLAP views over the MovieLens data warehouse. Figures shown here are sample data until the Flask API is connected.</p>
+      </div>
+    </section>
+
+    <section class="section section--tight" aria-label="Summary statistics">
+      <div class="container">
+        <div class="stat-grid">
+          <article class="stat-card glass">
+            <span class="stat-icon"><i class="fa-solid fa-film" aria-hidden="true"></i></span>
+            <p class="stat-value" data-stat="totalMovies" data-format="plus">0</p>
+            <p class="stat-label">Total Movies</p>
+          </article>
+          <article class="stat-card glass">
+            <span class="stat-icon"><i class="fa-solid fa-users" aria-hidden="true"></i></span>
+            <p class="stat-value" data-stat="totalUsers" data-format="plus">0</p>
+            <p class="stat-label">Total Users</p>
+          </article>
+          <article class="stat-card glass">
+            <span class="stat-icon"><i class="fa-solid fa-star" aria-hidden="true"></i></span>
+            <p class="stat-value" data-stat="totalRatings" data-format="million">0</p>
+            <p class="stat-label">Total Ratings</p>
+          </article>
+          <article class="stat-card glass">
+            <span class="stat-icon"><i class="fa-solid fa-gauge-high" aria-hidden="true"></i></span>
+            <p class="stat-value" data-stat="averageRating" data-format="decimal">0</p>
+            <p class="stat-label">Average Rating</p>
+          </article>
+        </div>
+        <div id="analyticsError"></div>
+      </div>
+    </section>
+
+    <section class="section section--tight" aria-labelledby="chartsTitle">
+      <div class="container">
+        <h2 class="section-title section-title--sm" id="chartsTitle">Charts</h2>
+        <div class="chart-grid">
+          <article class="chart-card glass">
+            <h3>Movies by Genre</h3>
+            <p class="chart-sub">Number of movies in each genre</p>
+            <div class="chart-box">
+              <canvas id="genreChart" role="img" aria-label="Bar chart of movies by genre"></canvas>
+              <div class="chart-loader"><span class="spinner" aria-hidden="true"></span><span class="sr-only">Loading chart</span></div>
+            </div>
+          </article>
+          <article class="chart-card glass">
+            <h3>Ratings Distribution</h3>
+            <p class="chart-sub">How many ratings were given as 1 to 5 stars</p>
+            <div class="chart-box">
+              <canvas id="ratingDistChart" role="img" aria-label="Doughnut chart of ratings distribution"></canvas>
+              <div class="chart-loader"><span class="spinner" aria-hidden="true"></span><span class="sr-only">Loading chart</span></div>
+            </div>
+          </article>
+          <article class="chart-card glass">
+            <h3>Average Rating by Year</h3>
+            <p class="chart-sub">Mean rating of movies by release year</p>
+            <div class="chart-box">
+              <canvas id="yearAvgChart" role="img" aria-label="Line chart of average rating by release year"></canvas>
+              <div class="chart-loader"><span class="spinner" aria-hidden="true"></span><span class="sr-only">Loading chart</span></div>
+            </div>
+          </article>
+          <article class="chart-card glass">
+            <h3>Top Rated Movies</h3>
+            <p class="chart-sub">Highest average rating on the 1 to 5 scale</p>
+            <div class="chart-box">
+              <canvas id="topMoviesChart" role="img" aria-label="Horizontal bar chart of top rated movies"></canvas>
+              <div class="chart-loader"><span class="spinner" aria-hidden="true"></span><span class="sr-only">Loading chart</span></div>
+            </div>
+          </article>
+          <article class="chart-card glass chart-card--wide">
+            <h3>Number of Ratings by Year</h3>
+            <p class="chart-sub">Ratings submitted per calendar year</p>
+            <div class="chart-box">
+              <canvas id="ratingsByYearChart" role="img" aria-label="Line chart of number of ratings by year"></canvas>
+              <div class="chart-loader"><span class="spinner" aria-hidden="true"></span><span class="sr-only">Loading chart</span></div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="olap" aria-labelledby="olapTitle">
+      <div class="container">
+        <header class="section-head">
+          <h2 class="section-title" id="olapTitle">OLAP Analysis</h2>
+          <p class="section-lead">Choose an operation, set its options and run it. The result table appears below.</p>
+        </header>
+
+        <div class="olap-grid">
+          <form class="olap-card glass" data-operation="rollup">
+            <div class="olap-card-head">
+              <span class="olap-icon"><i class="fa-solid fa-arrow-up-right-dots" aria-hidden="true"></i></span>
+              <div>
+                <h3>Roll-Up</h3>
+                <p class="olap-path">Year → Genre → Movie</p>
+              </div>
+            </div>
+            <p class="olap-desc">Summarise detailed rows into larger groups.</p>
+            <label class="field"><span>Summarise by</span>
+              <select class="select" name="level">
+                <option value="movie">Movie (most detail)</option>
+                <option value="genre" selected>Genre</option>
+                <option value="year">Year (highest level)</option>
+              </select>
+            </label>
+            <button type="submit" class="btn btn-outline btn-sm">Run Roll-Up</button>
+          </form>
+
+          <form class="olap-card glass" data-operation="drilldown">
+            <div class="olap-card-head">
+              <span class="olap-icon"><i class="fa-solid fa-arrow-down-wide-short" aria-hidden="true"></i></span>
+              <div>
+                <h3>Drill-Down</h3>
+                <p class="olap-path">Year → Month → Day</p>
+              </div>
+            </div>
+            <p class="olap-desc">Move from yearly totals to finer time detail.</p>
+            <label class="field"><span>Level</span>
+              <select class="select" name="level" id="drillLevel">
+                <option value="year">Year</option>
+                <option value="month">Month</option>
+                <option value="day">Day</option>
+              </select>
+            </label>
+            <div class="field-row">
+              <label class="field"><span>Year</span>
+                <select class="select" name="year" id="drillYear"></select>
+              </label>
+              <label class="field"><span>Month</span>
+                <select class="select" name="month" id="drillMonth">
+                  <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
+                  <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
+                  <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
+                  <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                </select>
+              </label>
+            </div>
+            <button type="submit" class="btn btn-outline btn-sm">Run Drill-Down</button>
+          </form>
+
+          <form class="olap-card glass" data-operation="slice">
+            <div class="olap-card-head">
+              <span class="olap-icon"><i class="fa-solid fa-scissors" aria-hidden="true"></i></span>
+              <div>
+                <h3>Slice</h3>
+                <p class="olap-path">One dimension fixed</p>
+              </div>
+            </div>
+            <p class="olap-desc">View movies from a selected year.</p>
+            <label class="field"><span>Release year</span>
+              <select class="select" name="year" id="sliceYear"></select>
+            </label>
+            <button type="submit" class="btn btn-outline btn-sm">Run Slice</button>
+          </form>
+
+          <form class="olap-card glass" data-operation="dice">
+            <div class="olap-card-head">
+              <span class="olap-icon"><i class="fa-solid fa-dice" aria-hidden="true"></i></span>
+              <div>
+                <h3>Dice</h3>
+                <p class="olap-path">Several dimensions filtered</p>
+              </div>
+            </div>
+            <p class="olap-desc">Filter by genre, year and minimum rating.</p>
+            <label class="field"><span>Genre</span>
+              <select class="select" name="genre" id="diceGenre"><option value="">Any genre</option></select>
+            </label>
+            <div class="field-row">
+              <label class="field"><span>Year</span>
+                <select class="select" name="year" id="diceYear"><option value="">Any year</option></select>
+              </label>
+              <label class="field"><span>Min rating</span>
+                <select class="select" name="rating" id="diceRating">
+                  <option value="0">Any</option>
+                  <option value="7.5">7.5+</option>
+                  <option value="8">8.0+</option>
+                  <option value="8.5">8.5+</option>
+                  <option value="9">9.0+</option>
+                </select>
+              </label>
+            </div>
+            <button type="submit" class="btn btn-outline btn-sm">Run Dice</button>
+          </form>
+        </div>
+
+        <div class="olap-results glass" aria-live="polite">
+          <div class="olap-results-head">
+            <h3 id="olapTitleResult">Results</h3>
+            <span class="pill" id="olapCount"></span>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="olapTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div id="olapState"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="logo"><span class="logo-icon" aria-hidden="true">🎬</span><span class="logo-text">CineSuggest</span></a>
+        <p>Smart Recommendations • Data Mining • Data Warehousing</p>
+      </div>
+      <nav aria-label="Footer navigation">
+        <ul class="footer-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="recommendations.html">Recommendations</a></li>
+          <li><a href="analytics.html">Analytics</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </nav>
+      <p class="footer-badge"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> DWM Academic Project</p>
+    </div>
+    <p class="container footer-copy">Built with the MovieLens dataset for a Data Warehousing and Data Mining course.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="js/main.js" defer></script>
+  <script src="js/analytics.js" defer></script>
+</body>
+</html>
